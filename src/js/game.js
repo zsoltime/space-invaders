@@ -2,17 +2,27 @@
 
 const game = document.getElementById('game');
 const colorLaser = '#d32f2f';
+const colorShip = '#fff';
+const rows = 5;
+const cols = 11;
+const paddingX = 50;
+const paddingY = 35;
 let ship;
 let lasers = [];
 let aliens = [];
+let score = 0;
+let approachedBottom = false;
+let destroyedAll = false;
 
 function setup() {
   let canvas = createCanvas(600, 400);
   canvas.parent(game);
+  noStroke();
   ship = Ship();
-
-  for (let i = 0; i < 11; i++) {
-    aliens.push(Alien(50 + i * 50, 30));
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      aliens.push(Alien(paddingX + j * paddingX, paddingY / 2 + i * paddingY));
+    }
   }
 }
 
@@ -20,7 +30,6 @@ function draw() {
   clear();
   ship.render();
   ship.move();
-
   let hitEdge = false;
 
   for (let i = 0; i < aliens.length; i++) {
@@ -31,12 +40,21 @@ function draw() {
         aliens[i].pos.x < 20) {
       hitEdge = true;
     }
+
+    if (aliens[i].pos.y + aliens[i].size / 2 >= height) {
+      approachedBottom = true;
+    }
   }
 
   if (hitEdge) {
     for (let i = 0; i < aliens.length; i++) {
       aliens[i].moveDown();
     }
+  }
+
+  if (approachedBottom) {
+    console.log('game over');
+    noLoop();
   }
 
   for (let i = lasers.length - 1; i >= 0; i--) {
@@ -51,11 +69,19 @@ function draw() {
       if (lasers.length === 0) { return; }
       if (lasers[i].hit(aliens[j])) {
         aliens.splice(j, 1);
+        score += 10;
+        // TODO: now it's only sometimes?!
         // if there is only one laser and I remove that, hit() causes error
         lasers.splice(i, 1);
       }
     }
   }
+
+  push();
+  textSize(14);
+  fill(colorLaser);
+  text(`Score: ${score}`, width -100, height -20);
+  pop();
 }
 
 function keyPressed() {
@@ -80,11 +106,12 @@ function keyReleased() {
 function Ship() {
   const size = 20;
   const speed = 1;
-  let pos = createVector((width - size) / 2, height);
+  let pos = createVector(width / 2, height - size);
   let velocity = createVector(0, 0);
 
   function render() {
-    rect(pos.x, height - size, size, size);
+    fill(colorShip);
+    triangle(pos.x, pos.y, pos.x + size / 2, pos.y + size, pos.x - size /2, pos.y + size);
   }
 
   function move() {
@@ -109,7 +136,13 @@ function Alien(x, y) {
   const size = 30;
 
   function render() {
+    fill(255);
     ellipse(pos.x, pos.y, size);
+    pop();
+    fill('red');
+    ellipse(pos.x - 5, pos.y - 5, size / 10);
+    ellipse(pos.x + 5, pos.y - 5, size / 10);
+    push();
   }
 
   function move() {
@@ -117,21 +150,16 @@ function Alien(x, y) {
   }
 
   function moveDown() {
-    pos.y += 2;
+    pos.y += 20;
     velocity.x *= -1;
   }
-
-  // function destroy() {
-  //   // console.log('ouch');
-  // }
 
   return {
     render,
     move,
     moveDown,
     pos,
-    size,
-    // destroy
+    size
   }
 }
 
@@ -142,6 +170,7 @@ function Laser(x, y) {
   function render() {
     push();
     stroke(colorLaser);
+    strokeWeight(2);
     line(pos.x, pos.y, pos.x, pos.y + size);
     pop();
   }
